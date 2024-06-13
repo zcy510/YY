@@ -1,20 +1,20 @@
 # trials
 import sys
 import os
-from PyQt5.QtWidgets import (QComboBox, QApplication, QMessageBox, QWidget, QLabel, QVBoxLayout, QPushButton, QFileDialog, QGridLayout)
+from PyQt5.QtWidgets import (QComboBox, QApplication, QMessageBox, QWidget, QLabel, QVBoxLayout, QPushButton, QFileDialog, QGridLayout, QDesktopWidget)
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 from zhipuai import ZhipuAI
 from PIL import Image
 import pytesseract
 import re
 
 # 加载环境变量
-load_dotenv()
+# load_dotenv()
 
 client = ZhipuAI(
-    api_key=os.getenv("ZHIPUAI_API_KEY")
+    api_key='09b8d49dd72b9a3dcb672947f6ec1797.BobXUuGN1oRlHQcL'
 )
 messages = []
 
@@ -35,19 +35,25 @@ class MyApp(QWidget):
         self.initUI()
         self.image_count = 0
         self.image_path_array = []
+        self.condition = 1 # 条件状态，记录小人头的开合状态
 
+    # 监听拖拽内容第一次进入应用窗口事件
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
             event.accept()
+            self.condition = 2
+            self.update_image()
         else:
             event.ignore()
 
+    # 监听拖拽内容进入窗口后的移动事件
     def dragMoveEvent(self, event):
         if event.mimeData().hasUrls():
             event.accept()
         else:
             event.ignore()
 
+    # 监听拖拽内容被松开事件
     def dropEvent(self, event):
         if event.mimeData().hasUrls():
             event.accept()
@@ -58,68 +64,101 @@ class MyApp(QWidget):
         else:
             event.ignore()
 
+    # 监听拖拽内容离开程序窗口事件
+    def dragLeaveEvent(self, event):
+        event.accept()
+        self.condition = 1
+        self.update_image()
+
+    def update_image(self):
+        # 根据条件选择图像
+        if self.condition ==1:
+            pixmap = QPixmap('1.png')
+        elif self.condition == 2:
+            pixmap = QPixmap('2.png')
+        elif self.condition == 3:
+            pixmap = QPixmap('3.png')
+        
+        self.head_label.setPixmap(pixmap.scaled(200, 200, Qt.KeepAspectRatio))
+
 
     def initUI(self):
         self.setWindowTitle('AcademicHelper •́ω•̀')
-        self.setGeometry(300, 300, 300, 300)
+        self.resize(800,600)
+        self.center()
+        # 使用样式表设置背景颜色
+        self.setStyleSheet("QWidget { background-color: #dd5f36; }")  # 亮绿色背景
         self.setAcceptDrops(True) #接受拖放标签
 
         
         self.label = QLabel('您的论文格式小助手上线啦', self) #居中显示标签
-        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setAlignment(Qt.AlignLeft | Qt.AlignTop)  # 水平靠右并且垂直居中
+        # 设置标签的固定高度
+        self.label.setFixedHeight(50)  # 设置标签的高度为50像素
 
-        self.head_closed = QLabel(self)
-        self.head_closed.setPixmap(QPixmap('head-closed.png').scaled(100, 100, Qt.KeepAspectRatio))
-        self.head_closed.setAlignment(Qt.AlignCenter)
-        
-        self.head_open = QLabel(self)
-        self.head_open.setPixmap(QPixmap('head-opened.png').scaled(100, 100, Qt.KeepAspectRatio))
-        self.head_open.setAlignment(Qt.AlignCenter)
-        self.head_open.setVisible(False)
-        
-        self.image_label = QLabel(self)
-        self.image_label.setAlignment(Qt.AlignCenter)
+        self.head_label = QLabel(self)
+        self.head_label.setPixmap(QPixmap('1.png').scaled(200, 200, Qt.KeepAspectRatio))
+        self.head_label.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+        self.head_label.setFixedHeight(200)  # 设置标签的高度为50像素
+
         
         self.result_label = QLabel(self)
-        self.result_label.setAlignment(Qt.AlignCenter)
+        self.result_label.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
         
         self.load_button = QPushButton('Load Image', self)
         self.load_button.clicked.connect(self.load_image)
+        self.load_button.setMinimumWidth(300)  # 设置按钮最小宽度
+        self.load_button.setMaximumWidth(500)  # 设置按钮最大宽度
+
         
         self.complete_button = QPushButton('Complete', self)
         self.complete_button.clicked.connect(self.complete_action)
+        self.complete_button.setMinimumWidth(300)  # 设置按钮最小宽度
+        self.complete_button.setMaximumWidth(500)  # 设置按钮最大宽度
+
         
         # 创建下拉框
         self.dropdown = QComboBox(self)
         self.dropdown.addItem("Option 1")
         self.dropdown.addItem("Option 2")
         self.dropdown.addItem("Option 3")
+        self.dropdown.setMinimumWidth(300)  # 设置按钮最小宽度
+        self.dropdown.setMaximumWidth(500)  # 设置按钮最大宽度
 
         self.grid_layout = QGridLayout()
 
         vbox = QVBoxLayout()
-        vbox.addWidget(self.image_label)
-        vbox.addWidget(self.dropdown)  # 将下拉框添加到布局中
-        vbox.addWidget(self.load_button)
-        vbox.addWidget(self.complete_button)
+        vbox.addWidget(self.label)
+        vbox.addWidget(self.dropdown, 0, Qt.AlignHCenter)  # 将下拉框添加到布局中
+        vbox.addWidget(self.load_button, 0, Qt.AlignHCenter)
+        vbox.addWidget(self.complete_button, 0, Qt.AlignHCenter)
         vbox.addLayout(self.grid_layout)
-        vbox.addWidget(self.result_label)        
+        vbox.addWidget(self.result_label)  
+        vbox.addWidget(self.head_label)      
         
 
         
         self.setLayout(vbox)
+
+    def center(self):
+        qr = self.frameGeometry()  # 获取窗口的几何形状
+        cp = QDesktopWidget().availableGeometry().center()  # 获取显示屏幕的中心点
+        qr.moveCenter(cp)  # 将窗口的中心点放置到屏幕的中心点
+        self.move(qr.topLeft())  # 移动窗口的顶部左角到计算出的位置
     
         # 定义一个函数load_image，用于加载图片
     def load_image(self, img_path=None): #img_path图像地址数组
         if (img_path): #拖拽
             for fileName in img_path:
-                pixmap = QPixmap(fileName).scaled(100, 100, Qt.KeepAspectRatio)
+                pixmap = QPixmap(fileName).scaled(150, 150, Qt.KeepAspectRatio)
                 image_label = QLabel(self)
                 image_label.setPixmap(pixmap)
                 image_label.setAlignment(Qt.AlignCenter)
-                self.grid_layout.addWidget(image_label, self.image_count// 3, self.image_count % 3)  # 假设每行最多显示3张图片
+                self.grid_layout.addWidget(image_label, self.image_count// 2, self.image_count % 2)  # 假设每行最多显示2张图片
                 self.image_path_array.append(fileName)
                 self.image_count += 1
+            self.condition=3
+            self.update_image()
 
         else: #从文件中选‘
             options = QFileDialog.Options()
@@ -127,18 +166,21 @@ class MyApp(QWidget):
             if fileNames:
                 
                 for fileName in fileNames:
-                    pixmap = QPixmap(fileName).scaled(100, 100, Qt.KeepAspectRatio)
+                    pixmap = QPixmap(fileName).scaled(150, 150, Qt.KeepAspectRatio)
                     image_label = QLabel(self)
                     image_label.setPixmap(pixmap)
                     image_label.setAlignment(Qt.AlignCenter)
-                    self.grid_layout.addWidget(image_label, self.image_count// 3, self.image_count % 3)  # 假设每行最多显示3张图片
+                    self.grid_layout.addWidget(image_label, self.image_count// 2, self.image_count % 2)  # 假设每行最多显示3张图片
                     self.image_path_array.append(fileName)
                     self.image_count += 1
+                self.condition=3
+                self.update_image()
 
 
     def complete_action(self):
         if hasattr(self, 'image_path_array'):
             self.process_image_and_call_api(self.image_path_array)
+            
         
 
     # def image_to_strings(img):
